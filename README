@@ -28,3 +28,5 @@ to render map format
 
 --- recommended you export to /maps dir and read from /tp_maps
 also - there is a `export_all_maps.sh` script which makes this more convenient for many maps
+
+Controls to use when testing are WASD
