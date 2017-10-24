@@ -2,7 +2,8 @@ tagos
 ===
 
 ## install
-
+This file's instructions are meant for Linux based environments
+     but should work for other environments with some modification.
 
 requires:
 sfml 2.3
