@@ -18,7 +18,7 @@ handle websocket movement input
 send map deltas for server
     (will require a queue for updates)
 handle chat
-
+support for controls for both WASD and arrow keys
 
 ## NETWORK
 
