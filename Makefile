@@ -1,3 +1,5 @@
+override DEPFLAGS += -MT $@ -MMD -MP -MF $(BUILD_DIR)/$*.d
+#override DEPFLAGS += -MM
 override CXXFLAGS += -std=c++14 -Wall -Wextra -pedantic -Werror=switch \
 	-Wno-inconsistent-missing-override
 
@@ -21,15 +23,16 @@ debug: CXXFLAGS += -DDEBUG -g
 debug: tagos
 
 tagos: $(OBJECTS) lib/Box2D/Build/gmake/bin/Debug/libBox2D.a
-	$(CXX) $^ -o $@ $(LDFLAGS)
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -c -o $@
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 
 lib/Box2D/Build/gmake/bin/Debug/libBox2D.a:
 	make -C lib/Box2D/Build/gmake
 
-.PHONY: mostlyclean clean
+$(BUILD_DIR)/%.d: $(SRC_DIR)/%.cpp
+	$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $<
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(BUILD_DIR)/%.d
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -c $@
 
 clean:
 	@rm -f build/*
@@ -37,3 +40,8 @@ clean:
 
 mostlyclean:
 	@rm -f build/*
+
+.PHONY: mostlyclean clean
+.PRECIOUS: $(BUILD_DIR)/%.d
+
+-include $(BUILD_DIR)/%.d

@@ -1,4 +1,5 @@
 tagos
+Makefile.dep
 compile_commands.json
 .gdbinit
 .gdbcoms
