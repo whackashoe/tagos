@@ -1,5 +1,28 @@
 #include "powerup.hpp"
 
+powerup::powerup()
+: possible_types({
+    powerup_type::tagpro,
+    powerup_type::jukejuice,
+    powerup_type::rollingbomb
+})
+{}
+
+powerup::powerup(
+    const float x,
+    const float y,
+    const std::vector<powerup_type> possible_types
+)
+: x(x)
+, y(y)
+, body(nullptr)
+, col_data(nullptr)
+, is_alive(true)
+, respawn_counter(0)
+, possible_types(possible_types)
+, type(get_random_type())
+{}
+
 void powerup::add_to_world(b2World * world)
 {
     const settings& config = settings::get_instance();
@@ -29,20 +52,50 @@ void powerup::step_on(ball* m)
     if(! is_alive) {
         return;
     }
-    std::cout << "powerup stepped on" << std::endl;
+    std::cout << "powerup stepped on: " << to_string(type) << std::endl;
     const settings& config = settings::get_instance();
-    respawn_counter = config.POWERUP_RESPAWN_TIME;
 
+    m->add_powerup(type);
+
+    respawn_counter = config.POWERUP_RESPAWN_TIME;
     is_alive = false;
+}
+
+powerup_type powerup::get_random_type()
+{
+    if(possible_types.empty()) {
+        std::cerr << "error: powerup get_random_type called but no types available" << std::endl;
+        return powerup_type::tagpro;
+    }
+
+    return possible_types[
+        std::uniform_int_distribution<std::size_t>(
+            0, possible_types.size() - 1
+        )(random_util::get_instance().eng)
+    ];
 }
 
 void to_json(nlohmann::json& j, const powerup& p)
 {
-    j = nlohmann::json{{"x", p.x}, {"y", p.y}};
+    std::vector<std::string> types;
+    for(auto & o : p.possible_types) {
+        types.emplace_back(to_string(o));
+    };
+
+    j = nlohmann::json{
+        {"x", p.x},
+        {"y", p.y},
+        {"types", types}
+    };
 }
 
 void from_json(const nlohmann::json& j, powerup& p)
 {
     p.x = j.at("x").get<float>();
     p.y = j.at("y").get<float>();
+
+    const std::vector<std::string> types = j.at("types").get<std::vector<std::string>>();
+    for(auto & o : types) {
+        p.possible_types.emplace_back(powerup_type_from_string(o));
+    }
 }

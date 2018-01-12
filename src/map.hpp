@@ -15,6 +15,7 @@
 #include <random>
 #include <cmath>
 #include <memory>
+#include <algorithm>
 
 #include "libs/lodepng.h"
 #include "libs/json.hpp"
@@ -37,8 +38,10 @@
 #include "flag.hpp"
 #include "polygon.hpp"
 #include "ball.hpp"
+#include "ball_powerup.hpp"
 #include "contact_listener.hpp"
 #include "random_util.hpp"
+#include "chain.hpp"
 
 struct toggle;
 struct ball;
@@ -54,26 +57,22 @@ struct map
     std::uint32_t width;
     std::uint32_t height;
 
-    std::vector<wall>    walls;
-    std::vector<tile>    tiles;
+    std::vector<std::unique_ptr<wall>>    walls;
+    std::vector<std::unique_ptr<tile>>    tiles;
     
-    std::vector<portal>  portals;
-    std::vector<toggle>  toggles;
-    std::vector<spawn>   spawns;
-    std::vector<bomb>    bombs;
-    std::vector<spike>   spikes;
-    std::vector<powerup> powerups;
-    std::vector<booster> boosters;
-    std::vector<gate>    gates;
-    std::vector<flag>    flags;
-    std::vector<std::unique_ptr<ball>> balls;
+    std::vector<std::unique_ptr<portal>>  portals;
+    std::vector<std::unique_ptr<toggle>>  toggles;
+    std::vector<std::unique_ptr<spawn>>   spawns;
+    std::vector<std::unique_ptr<bomb>>    bombs;
+    std::vector<std::unique_ptr<spike>>   spikes;
+    std::vector<std::unique_ptr<booster>> boosters;
+    std::vector<std::unique_ptr<gate>>    gates;
+    std::vector<std::unique_ptr<flag>>    flags;
+    std::vector<std::unique_ptr<powerup>> powerups;
+    std::vector<std::unique_ptr<ball>>    balls;
+    std::vector<std::unique_ptr<chain>>   chains;
 
     map();
-
-    void update(b2World* world);
-    b2World* init_world();
-    ball* add_ball(b2World* world, ball b);
-    void respawn_ball(ball* b);
 };
 
 void to_json(nlohmann::json& j, const map& p);

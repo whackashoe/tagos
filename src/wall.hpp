@@ -9,11 +9,12 @@
 #include "polygon.hpp"
 #include "color.hpp"
 
+struct collision_user_data;
+
 struct wall
 {
     polygon poly;
     color col;
-    b2Body * body;
     std::shared_ptr<collision_user_data> col_data;
 
     wall(){}
@@ -23,11 +24,8 @@ struct wall
     )
     : poly(poly)
     , col(col)
-    , body(nullptr)
     , col_data(nullptr)
     {}
-
-    void add_to_world(b2World * world);
 };
 
 void to_json(nlohmann::json& j, const wall& p);

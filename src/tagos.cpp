@@ -3,6 +3,8 @@
 #include <sstream>
 #include <cstdlib>
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <Box2D/Box2D.h>
 
@@ -12,6 +14,22 @@
 #include "map_renderer.hpp"
 #include "settings.hpp"
 #include "server_lobby.hpp"
+#include "game.hpp"
+
+int display_renderer(map& m)
+{
+    map_renderer renderer(m);
+
+    if(renderer.open_window() != 0) {
+        std::cerr << "error: open window failed" << std::endl;
+        return 1;
+    }
+
+    while(renderer.render() && renderer.get_input());
+    renderer.close_window();
+
+    return 0;
+}
 
 int export_tp_map(
     const std::string & json_src,
@@ -41,21 +59,15 @@ int render(const std::string & map_src)
     std::stringstream buf;
     buf << t.rdbuf();
 
-    map m = nlohmann::json::parse(buf.str());
-    map_renderer renderer(m);
 
-    if(renderer.open_window() != 0) {
-        std::cerr << "error: open window failed" << std::endl;
+    map m = nlohmann::json::parse(buf.str());
+    game g(0, &m);
+    g.spawn_thread();
+
+    if(display_renderer(*(g.m)) != 0) {
         return EXIT_FAILURE;
     }
 
-    b2World * world = m.init_world();
-    while(renderer.render() && renderer.get_input()) {
-        m.update(world);
-        world->Step(1/60.0, 8, 3);
-    }
-
-    renderer.close_window();
     return EXIT_SUCCESS;
 }
 
@@ -69,29 +81,89 @@ int serve()
         std::string line;
         std::getline(std::cin, line);
 
-        if(line == "quit") {
-            lobby.is_alive = false;
+        std::vector<std::string> iparts;
+        {
+            std::istringstream iss(line);
+            for(std::string s; iss >> s;) {
+                iparts.push_back(s);
+            }
         }
 
-        // todo: fixme
-        // idea is for this to allow us to see a game in action
-        // however it currently crashes while creating sfml window
-        if(line == "render") {
+        if(iparts.empty()) {
+            continue;
+        }
+
+        const std::string cmd = iparts[0];
+
+
+        if(cmd == "quit") {
+            lobby.is_alive = false;
+            std::cout << "quitting..." << std::endl;
+        } else if(cmd == "help") {
+            std::cout
+                << "available commands: \n\n"
+                << "\thelp           (show this help)\n" 
+                << "\tquit           (quits server)\n" 
+                << "\trender GAME_ID (opens sfml debug window for game)\n"
+                << "\tstats          (shows game/player stats)\n"
+                << std::endl;
+        } else if(cmd == "render") {
+            if(iparts.size() != 2) {
+                std::cout
+                    << "render requires two arguments"
+                    << std::endl;
+                continue;
+            }
+
             const server_lobby& lobby = server_lobby::get_instance();
 
             if(lobby.games.size() == 0) {
                 std::cerr << "error: no games currently running" << std::endl;
             }
 
-            map_renderer renderer(*(lobby.games[0].m));
-
-            if(renderer.open_window() != 0) {
-                std::cerr << "error: open window failed" << std::endl;
+            int game_id = 0;
+            try {
+                game_id = std::stoi(iparts[1]);
+            } catch(std::invalid_argument& e) {
+                std::cout
+                    << "render requires an integer argument"
+                    << std::endl;
                 continue;
             }
 
-            while(renderer.render() && renderer.get_input());
-            renderer.close_window();
+            if(game_id < 0
+            || static_cast<std::size_t>(game_id) >= lobby.games.size())
+            {
+                std::cout
+                    << "game_id invalid"
+                    << std::endl;
+                continue;
+            }
+
+            display_renderer(*(lobby.games[game_id].get()->m));
+        } else if(cmd == "stats") {
+            const server_lobby& lobby = server_lobby::get_instance();
+
+            std::size_t total_players = 0;
+            for(std::size_t i=0; i<lobby.games.size(); ++i) {
+                const game& g = *(lobby.games[i]);
+                const std::size_t g_players = g.m->balls.size();
+                std::cout
+                    << "game: " << i << "\t"
+                    << "players: " << g_players
+                    << "\n";
+                total_players += g_players;
+            }
+
+            std::cout
+                << "\n"
+                << "total games:\t" << lobby.games.size() << "\n"
+                << "total players:\t" << total_players
+                << std::endl;
+        } else {
+            std::cout
+                << "unrecognized command (try help)"
+                << std::endl;
         }
     }
 

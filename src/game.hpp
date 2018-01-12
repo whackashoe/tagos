@@ -4,8 +4,15 @@
 #include <cstdint>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <queue>
+#include <memory>
 #include "libs/json.hpp"
 #include "map.hpp"
+#include "client_action.hpp"
+#include "player.hpp"
+
+struct player;
 
 struct game
 {
@@ -14,14 +21,24 @@ struct game
     std::uint32_t max_points;
     std::uint32_t max_length;
     b2World * world;
+    std::size_t timestep;
+    std::vector<std::unique_ptr<player>> players;
+    std::mutex client_actions_queue_mutex;
+    std::queue<client_action> client_actions_queue;
 
     game(){}
     game(const std::uint16_t port, map* m);
+    game(const game&) = delete;
 
-    void run_physics();
+    std::thread spawn_thread();
+    void run();
+    void step();
+
+    b2World* init_world();
+    ball* add_ball(ball b);
+    void respawn_ball(ball* b);
+    player* add_player(player p);
 };
-
-void to_json(nlohmann::json& j, const game& p);
 
 #endif
 
